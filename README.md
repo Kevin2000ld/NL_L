@@ -1,96 +1,123 @@
-from pathlib import Path
-
-# Creamos el contenido HTML del gráfico circular interactivo
-html_content = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Diagrama Circular Interactivo</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diagrama Circular de Procesos</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      text-align: center;
-      padding: 20px;
-      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: #f4f6f9;
     }
-    #infoBox {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 10px;
-      background-color: #ffffff;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      display: none;
+    .chart-container {
+      position: relative;
+      width: 90vmin;
+      height: 90vmin;
+    }
+    #chartLabels {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      pointer-events: none;
+    }
+    .label {
+      position: absolute;
+      width: 80px;
+      text-align: center;
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #fff;
     }
   </style>
 </head>
 <body>
-  <h2>Diagrama Circular del Proceso de Análisis</h2>
-  <canvas id="processChart" width="400" height="400"></canvas>
-  <div id="infoBox"></div>
+  <div class="chart-container">
+    <canvas id="myChart"></canvas>
+    <div id="chartLabels"></div>
+  </div>
 
   <script>
-    const steps = [
-      "1. Descarga de imágenes satelitales: Landsat 8 desde USGS EarthExplorer (2014-2024).",
-      "2. Clasificación supervisada con bandas 6, 5, 2 y método Maximum Likelihood.",
-      "3. Índices para LST:\n- Radiancia espectral (TOA)\n- Temperatura de brillo (BT)\n- Proporción de vegetación (Pv)\n- Emisividad (ε)\n- LST.",
-      "4. NDVI: (B5 - B4) / (B5 + B4).",
-      "5. NDBI: (B6 - B5) / (B6 + B5).",
-      "6. Cálculo de la Isla de Calor Urbana: (Ts - Tm) / SD."
+    const labels = [
+      "1. Descarga de imágenes",
+      "2. Clasificación supervisada",
+      "3. Radianza espectral",
+      "4. Temperatura del brillo",
+      "5. Proporción de vegetación",
+      "6. Emisividad",
+      "7. LST",
+      "8. NDVI",
+      "9. NDBI",
+      "10. ICU"
     ];
 
-    const ctx = document.getElementById('processChart').getContext('2d');
-    const chart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Paso 1', 'Paso 2', 'Paso 3', 'Paso 4', 'Paso 5', 'Paso 6'],
-        datasets: [{
-          label: 'Proceso',
-          data: [1, 1, 1, 1, 1, 1],
-          backgroundColor: [
-            '#4e79a7',
-            '#f28e2c',
-            '#e15759',
-            '#76b7b2',
-            '#59a14f',
-            '#edc949'
-          ],
-          borderColor: '#fff',
-          borderWidth: 2
-        }]
-      },
+    const colors = [
+      "#2E8B57", "#3CB371", "#66CDAA", "#20B2AA", "#5F9EA0",
+      "#4682B4", "#6495ED", "#7B68EE", "#9370DB", "#BA55D3"
+    ];
+
+    const data = {
+      labels,
+      datasets: [{
+        data: Array(labels.length).fill(1),
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: "#fff"
+      }]
+    };
+
+    const config = {
+      type: "doughnut",
+      data,
       options: {
-        responsive: true,
+        cutout: "50%",
         plugins: {
-          legend: {
-            position: 'bottom'
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
-              label: function(context) {
-                return context.label;
+              label: function(ctx) {
+                return ctx.label;
               }
             }
           }
         },
-        onClick: (evt, elements) => {
-          if (elements.length > 0) {
-            const index = elements[0].index;
-            const infoBox = document.getElementById("infoBox");
-            infoBox.style.display = "block";
-            infoBox.innerText = steps[index];
-          }
+        animation: {
+          animateRotate: true,
+          animateScale: true
         }
       }
+    };
+
+    const myChart = new Chart(
+      document.getElementById("myChart"),
+      config
+    );
+
+    const labelContainer = document.getElementById("chartLabels");
+    const radius = 38; // Ajuste de radio interno para ubicar etiquetas dentro
+    labels.forEach((label, index) => {
+      const angle = (index / labels.length) * 2 * Math.PI - Math.PI / 2;
+      const x = 50 + radius * Math.cos(angle);
+      const y = 50 + radius * Math.sin(angle);
+      const div = document.createElement("div");
+      div.className = "label";
+      div.style.left = `${x}%`;
+      div.style.top = `${y}%`;
+      div.innerText = label.split(". ")[0];
+      div.title = label;
+      labelContainer.appendChild(div);
     });
   </script>
 </body>
 </html>
-"""
-
-# Guardamos el archivo HTML
-output_path = Path("/mnt/data/diagrama_circular_interactivo.html")
-output_path.write_text(html_content, encoding="utf-8")
-output_path
-
