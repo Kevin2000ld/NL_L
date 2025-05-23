@@ -10,7 +10,7 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
   const pasos = [
-    { titulo: "1. Descarga de Imágenes", detalle: "Imágenes Landsat 8 descargadas desde USGS Earth Explorer. Se recomienda seleccionar escenas libres de nubes." },
+    { titulo: "1. Descarga de Imágenes22", detalle: "Imágenes Landsat 8 descargadas desde USGS Earth Explorer. Se recomienda seleccionar escenas libres de nubes." },
     { titulo: "2. Clasificación Supervisada", detalle: "Clasificación en base a bandas 6, 5, 2. Uso de entrenamiento supervisado para diferenciar coberturas." },
     { titulo: "3. Radianza Espectral", detalle: "Se calcula la radianza TOA usando coeficientes multiplicadores y aditivos del MTL." },
     { titulo: "4. Temperatura de Brillo", detalle: "Conversión de radianza a temperatura del sensor usando la fórmula de Planck simplificada." },
