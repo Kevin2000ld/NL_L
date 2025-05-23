@@ -1,123 +1,104 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Diagrama Circular de Procesos</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background: #f4f6f9;
+<div id="graficoFlujo" style="width: 100%; max-width: 720px; margin: auto;"></div>
+
+<!-- Modal mejorado -->
+<div id="modalInfo" style="
+  display: none;
+  position: fixed;
+  top: 5%;
+  left: 5%;
+  width: 90%;
+  max-width: 800px;
+  height: 80%;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  z-index: 9999;
+  font-family: 'Arial', sans-serif;
+">
+  <h2 id="modalTitulo" style="margin-top: 0;"></h2>
+  <div id="modalContenido" style="white-space: pre-wrap; line-height: 1.6;"></div>
+  <button onclick="document.getElementById('modalInfo').style.display='none'"
+    style="margin-top: 20px; padding: 10px 20px; background: #007acc; color: white; border: none; border-radius: 8px;">
+    Cerrar
+  </button>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+  const pasos = [
+    {
+      titulo: "1. Descarga de Imágenes Satelitales",
+      detalle: `• Fuente: USGS Earth Explorer\n• Satélite: Landsat 8 OLI/TIRS\n• Recomendación: Seleccionar escenas sin nubosidad (<10%) y temporada seca.`
+    },
+    {
+      titulo: "2. Clasificación Supervisada",
+      detalle: `• Combinación de bandas: 6 (SWIR1), 5 (NIR), 2 (Blue)\n• Método: Clasificación supervisada con entrenamiento manual\n• Resultado: Mapa de coberturas (urbana, vegetación, agua, etc.).`
+    },
+    {
+      titulo: "3. Cálculo de Radianza Espectral",
+      detalle: `• Fórmula: Lλ = ML * Qcal + AL\n• ML: multiplicador de ganancia radiométrica\n• AL: valor aditivo de sesgo\n• Qcal: valor digital (DN).`
+    },
+    {
+      titulo: "4. Temperatura de Brillo",
+      detalle: `• Fórmula: Tb = K2 / ln(K1 / Lλ + 1)\n• Constantes K1 y K2 proporcionadas por USGS\n• Unidad: Kelvin.`
+    },
+    {
+      titulo: "5. Proporción de Vegetación (PV)",
+      detalle: `• A partir del NDVI:\nNDVI = (NIR - RED) / (NIR + RED)\nPV = ((NDVI - NDVImin) / (NDVImax - NDVImin))²`
+    },
+    {
+      titulo: "6. Emisividad (ε)",
+      detalle: `• ε = 0.004 * PV + 0.986\n• Depende de la cobertura vegetal del píxel.\n• Rango típico: 0.97 – 0.99`
+    },
+    {
+      titulo: "7. Temperatura Superficial (LST)",
+      detalle: `• Fórmula:\nLST = Tb / [1 + (λ * Tb / ρ) * ln(ε)]\n• λ: longitud de onda central\n• ρ: constante de Planck ≈ 1.438 * 10⁻² m K`
+    },
+    {
+      titulo: "8. NDVI",
+      detalle: `• Fórmula: (NIR - RED) / (NIR + RED)\n• Valores entre -1 y +1\n• Permite diferenciar vegetación densa, escasa y áreas artificiales.`
+    },
+    {
+      titulo: "9. NDBI",
+      detalle: `• Fórmula: (SWIR - NIR) / (SWIR + NIR)\n• Áreas construidas tienden a valores positivos\n• Complementario del NDVI para análisis urbano.`
+    },
+    {
+      titulo: "10. ICU (Isla de Calor Urbana)",
+      detalle: `• ICU = LST_píxel - LST_promedio_vegetación\n• Mide la intensidad térmica urbana en contraste con áreas vegetadas\n• Aplicación: planeamiento urbano sostenible.`
     }
-    .chart-container {
-      position: relative;
-      width: 90vmin;
-      height: 90vmin;
+  ];
+
+  const labels = pasos.map(p => p.titulo.split(". ")[0]); // Solo números
+  const names = pasos.map(p => p.titulo.split(". ")[1]); // Nombres cortos
+
+  const data = [{
+    type: "pie",
+    values: Array(pasos.length).fill(1),
+    labels: labels.map((num, i) => `${num}. ${names[i]}`),
+    textinfo: "label",
+    textposition: "inside",
+    hoverinfo: "label",
+    marker: {
+      colors: [
+        "#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854",
+        "#ffd92f", "#e5c494", "#b3b3b3", "#80b1d3", "#fdb462"
+      ]
     }
-    #chartLabels {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      pointer-events: none;
-    }
-    .label {
-      position: absolute;
-      width: 80px;
-      text-align: center;
-      font-size: 0.8rem;
-      font-weight: bold;
-      color: #fff;
-    }
-  </style>
-</head>
-<body>
-  <div class="chart-container">
-    <canvas id="myChart"></canvas>
-    <div id="chartLabels"></div>
-  </div>
+  }];
 
-  <script>
-    const labels = [
-      "1. Descarga de imágenes",
-      "2. Clasificación supervisada",
-      "3. Radianza espectral",
-      "4. Temperatura del brillo",
-      "5. Proporción de vegetación",
-      "6. Emisividad",
-      "7. LST",
-      "8. NDVI",
-      "9. NDBI",
-      "10. ICU"
-    ];
+  const layout = {
+    title: "Flujo de Procesamiento para el Cálculo de LST e ICU",
+    showlegend: false
+  };
 
-    const colors = [
-      "#2E8B57", "#3CB371", "#66CDAA", "#20B2AA", "#5F9EA0",
-      "#4682B4", "#6495ED", "#7B68EE", "#9370DB", "#BA55D3"
-    ];
+  Plotly.newPlot("graficoFlujo", data, layout);
 
-    const data = {
-      labels,
-      datasets: [{
-        data: Array(labels.length).fill(1),
-        backgroundColor: colors,
-        borderWidth: 2,
-        borderColor: "#fff"
-      }]
-    };
-
-    const config = {
-      type: "doughnut",
-      data,
-      options: {
-        cutout: "50%",
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(ctx) {
-                return ctx.label;
-              }
-            }
-          }
-        },
-        animation: {
-          animateRotate: true,
-          animateScale: true
-        }
-      }
-    };
-
-    const myChart = new Chart(
-      document.getElementById("myChart"),
-      config
-    );
-
-    const labelContainer = document.getElementById("chartLabels");
-    const radius = 38; // Ajuste de radio interno para ubicar etiquetas dentro
-    labels.forEach((label, index) => {
-      const angle = (index / labels.length) * 2 * Math.PI - Math.PI / 2;
-      const x = 50 + radius * Math.cos(angle);
-      const y = 50 + radius * Math.sin(angle);
-      const div = document.createElement("div");
-      div.className = "label";
-      div.style.left = `${x}%`;
-      div.style.top = `${y}%`;
-      div.innerText = label.split(". ")[0];
-      div.title = label;
-      labelContainer.appendChild(div);
-    });
-  </script>
-</body>
-</html>
+  document.getElementById("graficoFlujo").on("plotly_click", function(data) {
+    const punto = data.points[0].pointIndex;
+    document.getElementById("modalTitulo").innerText = pasos[punto].titulo;
+    document.getElementById("modalContenido").innerText = pasos[punto].detalle;
+    document.getElementById("modalInfo").style.display = "block";
+  });
+</script>
