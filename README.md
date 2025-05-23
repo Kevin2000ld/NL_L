@@ -1,52 +1,104 @@
-<div id="graficoFlujo" style="width: 100%; max-width: 700px; margin: auto;"></div>
+<div id="graficoFlujo" style="width: 100%; max-width: 720px; margin: auto;"></div>
 
-<!-- Modal -->
-<div id="modalInfo" style="display:none; position:fixed; top:10%; left:10%; width:80%; background:white; border-radius:10px; padding:20px; box-shadow: 0 0 15px rgba(0,0,0,0.4); z-index:1000;">
-  <h2 id="modalTitulo"></h2>
-  <p id="modalContenido"></p>
-  <button onclick="document.getElementById('modalInfo').style.display='none'" style="padding:10px 20px; margin-top:20px;">Cerrar</button>
+<!-- Modal mejorado -->
+<div id="modalInfo" style="
+  display: none;
+  position: fixed;
+  top: 5%;
+  left: 5%;
+  width: 90%;
+  max-width: 800px;
+  height: 80%;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  z-index: 9999;
+  font-family: 'Arial', sans-serif;
+">
+  <h2 id="modalTitulo" style="margin-top: 0;"></h2>
+  <div id="modalContenido" style="white-space: pre-wrap; line-height: 1.6;"></div>
+  <button onclick="document.getElementById('modalInfo').style.display='none'"
+    style="margin-top: 20px; padding: 10px 20px; background: #007acc; color: white; border: none; border-radius: 8px;">
+    Cerrar
+  </button>
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
   const pasos = [
-    { titulo: "1. Descarga de Imágenes22", detalle: "Imágenes Landsat 8 descargadas desde USGS Earth Explorer. Se recomienda seleccionar escenas libres de nubes." },
-    { titulo: "2. Clasificación Supervisada", detalle: "Clasificación en base a bandas 6, 5, 2. Uso de entrenamiento supervisado para diferenciar coberturas." },
-    { titulo: "3. Radianza Espectral", detalle: "Se calcula la radianza TOA usando coeficientes multiplicadores y aditivos del MTL." },
-    { titulo: "4. Temperatura de Brillo", detalle: "Conversión de radianza a temperatura del sensor usando la fórmula de Planck simplificada." },
-    { titulo: "5. Proporción de Vegetación (PV)", detalle: "Se calcula desde el NDVI para estimar cobertura vegetal." },
-    { titulo: "6. Emisividad (ε)", detalle: "La emisividad se calcula con base en el PV para cada píxel." },
-    { titulo: "7. LST", detalle: "Temperatura Superficial Terrestre usando la fórmula: LST = Tb / (1 + (λ * Tb / ρ) * ln(ε))." },
-    { titulo: "8. NDVI", detalle: "Índice de vegetación normalizado. Fórmula: (NIR - Red) / (NIR + Red)." },
-    { titulo: "9. NDBI", detalle: "Índice de construcción calculado como (SWIR - NIR) / (SWIR + NIR)." },
-    { titulo: "10. ICU", detalle: "Cálculo de la Isla de Calor Urbana: ICU = LST - LST promedio." }
+    {
+      titulo: "1. Descarga de Imágenes Satelitales",
+      detalle: `• Fuente: USGS Earth Explorer\n• Satélite: Landsat 8 OLI/TIRS\n• Recomendación: Seleccionar escenas sin nubosidad (<10%) y temporada seca.`
+    },
+    {
+      titulo: "2. Clasificación Supervisada",
+      detalle: `• Combinación de bandas: 6 (SWIR1), 5 (NIR), 2 (Blue)\n• Método: Clasificación supervisada con entrenamiento manual\n• Resultado: Mapa de coberturas (urbana, vegetación, agua, etc.).`
+    },
+    {
+      titulo: "3. Cálculo de Radianza Espectral",
+      detalle: `• Fórmula: Lλ = ML * Qcal + AL\n• ML: multiplicador de ganancia radiométrica\n• AL: valor aditivo de sesgo\n• Qcal: valor digital (DN).`
+    },
+    {
+      titulo: "4. Temperatura de Brillo",
+      detalle: `• Fórmula: Tb = K2 / ln(K1 / Lλ + 1)\n• Constantes K1 y K2 proporcionadas por USGS\n• Unidad: Kelvin.`
+    },
+    {
+      titulo: "5. Proporción de Vegetación (PV)",
+      detalle: `• A partir del NDVI:\nNDVI = (NIR - RED) / (NIR + RED)\nPV = ((NDVI - NDVImin) / (NDVImax - NDVImin))²`
+    },
+    {
+      titulo: "6. Emisividad (ε)",
+      detalle: `• ε = 0.004 * PV + 0.986\n• Depende de la cobertura vegetal del píxel.\n• Rango típico: 0.97 – 0.99`
+    },
+    {
+      titulo: "7. Temperatura Superficial (LST)",
+      detalle: `• Fórmula:\nLST = Tb / [1 + (λ * Tb / ρ) * ln(ε)]\n• λ: longitud de onda central\n• ρ: constante de Planck ≈ 1.438 * 10⁻² m K`
+    },
+    {
+      titulo: "8. NDVI",
+      detalle: `• Fórmula: (NIR - RED) / (NIR + RED)\n• Valores entre -1 y +1\n• Permite diferenciar vegetación densa, escasa y áreas artificiales.`
+    },
+    {
+      titulo: "9. NDBI",
+      detalle: `• Fórmula: (SWIR - NIR) / (SWIR + NIR)\n• Áreas construidas tienden a valores positivos\n• Complementario del NDVI para análisis urbano.`
+    },
+    {
+      titulo: "10. ICU (Isla de Calor Urbana)",
+      detalle: `• ICU = LST_píxel - LST_promedio_vegetación\n• Mide la intensidad térmica urbana en contraste con áreas vegetadas\n• Aplicación: planeamiento urbano sostenible.`
+    }
   ];
 
-  const labels = pasos.map(p => p.titulo);
-  const text = pasos.map(p => p.detalle);
+  const labels = pasos.map(p => p.titulo.split(". ")[0]); // Solo números
+  const names = pasos.map(p => p.titulo.split(". ")[1]); // Nombres cortos
 
   const data = [{
     type: "pie",
-    labels: labels,
-    values: Array(labels.length).fill(1),
+    values: Array(pasos.length).fill(1),
+    labels: labels.map((num, i) => `${num}. ${names[i]}`),
     textinfo: "label",
     textposition: "inside",
-    hoverinfo: "label+text",
-    marker: { colors: ["#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3", "#fdb462", "#b3de69", "#fccde5", "#d9d9d9", "#bc80bd"] }
+    hoverinfo: "label",
+    marker: {
+      colors: [
+        "#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854",
+        "#ffd92f", "#e5c494", "#b3b3b3", "#80b1d3", "#fdb462"
+      ]
+    }
   }];
 
   const layout = {
-    title: "Flujo de procesamiento para el cálculo de LST e ICU",
+    title: "Flujo de Procesamiento para el Cálculo de LST e ICU",
     showlegend: false
   };
 
-  Plotly.newPlot('graficoFlujo', data, layout);
+  Plotly.newPlot("graficoFlujo", data, layout);
 
-  // Manejo de clics
-  document.getElementById('graficoFlujo').on('plotly_click', function(data){
+  document.getElementById("graficoFlujo").on("plotly_click", function(data) {
     const punto = data.points[0].pointIndex;
-    document.getElementById('modalTitulo').innerText = pasos[punto].titulo;
-    document.getElementById('modalContenido').innerText = pasos[punto].detalle;
-    document.getElementById('modalInfo').style.display = 'block';
+    document.getElementById("modalTitulo").innerText = pasos[punto].titulo;
+    document.getElementById("modalContenido").innerText = pasos[punto].detalle;
+    document.getElementById("modalInfo").style.display = "block";
   });
 </script>
