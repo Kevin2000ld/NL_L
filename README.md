@@ -1,1 +1,96 @@
-# NL_L
+from pathlib import Path
+
+# Creamos el contenido HTML del gráfico circular interactivo
+html_content = """
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Diagrama Circular Interactivo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    #infoBox {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      background-color: #ffffff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>Diagrama Circular del Proceso de Análisis</h2>
+  <canvas id="processChart" width="400" height="400"></canvas>
+  <div id="infoBox"></div>
+
+  <script>
+    const steps = [
+      "1. Descarga de imágenes satelitales: Landsat 8 desde USGS EarthExplorer (2014-2024).",
+      "2. Clasificación supervisada con bandas 6, 5, 2 y método Maximum Likelihood.",
+      "3. Índices para LST:\n- Radiancia espectral (TOA)\n- Temperatura de brillo (BT)\n- Proporción de vegetación (Pv)\n- Emisividad (ε)\n- LST.",
+      "4. NDVI: (B5 - B4) / (B5 + B4).",
+      "5. NDBI: (B6 - B5) / (B6 + B5).",
+      "6. Cálculo de la Isla de Calor Urbana: (Ts - Tm) / SD."
+    ];
+
+    const ctx = document.getElementById('processChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Paso 1', 'Paso 2', 'Paso 3', 'Paso 4', 'Paso 5', 'Paso 6'],
+        datasets: [{
+          label: 'Proceso',
+          data: [1, 1, 1, 1, 1, 1],
+          backgroundColor: [
+            '#4e79a7',
+            '#f28e2c',
+            '#e15759',
+            '#76b7b2',
+            '#59a14f',
+            '#edc949'
+          ],
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.label;
+              }
+            }
+          }
+        },
+        onClick: (evt, elements) => {
+          if (elements.length > 0) {
+            const index = elements[0].index;
+            const infoBox = document.getElementById("infoBox");
+            infoBox.style.display = "block";
+            infoBox.innerText = steps[index];
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+"""
+
+# Guardamos el archivo HTML
+output_path = Path("/mnt/data/diagrama_circular_interactivo.html")
+output_path.write_text(html_content, encoding="utf-8")
+output_path
+
